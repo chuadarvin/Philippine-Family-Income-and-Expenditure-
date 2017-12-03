@@ -1,0 +1,919 @@
+mongoimport --db phdata --collection phincomeexpenditure --type csv --headerline --file /data/db/Family\ Income\ and\ Expenditure.csv
+
+mongoexport --db phdata --collection phincomeexpenditure.classes --type=csv --fields _id.class,value --out /data/db/output1.csv
+
+mongoexport --db phdata --collection phincomeexpenditure.avgfoodall --type=csv --fields _id.class,value.income,value.bread,value.rice,value.meat,value.fruit,value.fish,value.veggie,value.hre,value.familysize,value.totalfood --out /data/db/output2.csv
+
+mongoexport --db phdata --collection phincomeexpenditure.avgmeal --type=csv --fields _id.class,value.total --out /data/db/output3.csv
+
+mongoexport --db phdata --collection phincomeexpenditure.avgotherall --type=csv --fields _id.class,value.income,value.alcohol,value.tobacco,value.clothing,value.medical,value.education,value.housing,value.transpo,value.totalfood,value.numberoffam --out /data/db/output4.csv
+
+mongoexport --db phdata --collection phincomeexpenditure.foodtypevsmedical --type=csv --fields _id.class,value.income,value.bread,value.rice,value.meat,value.fruit,value.fish,value.veggie,value.familysize, --out /data/db/output5.csv
+
+mongoexport --db phdata --collection phincomeexpenditure.incomevsvices --type=csv --fields _id.class,value.income,value.alcohol,value.tobacco,value.clothing,value.medical,value.education,value.housing,value.transpo --out /data/db/output6.csv
+
+mongoexport --db phdata --collection phincomeexpenditure.netincome --type=csv --fields _id.class,value.income --out /data/db/output7.csv
+
+mongoexport --db phdata --collection phincomeexpenditure.incomevsexp --type=csv --fields _id.class,value.income,value.bread,value.rice,value.meat,value.fruit,value.fish,value.veggie,value.hre,value.familysize --out /data/db/output8.csv
+
+
+map = function() {
+   function socialclass (x, y)
+        {
+             var output ="";
+            x = x/y; 
+           if (x<=1578)
+            {
+                output = "poor";
+            }
+            else if (x>1578 && x<=3156)
+            {       
+                output = "low income";
+            }
+            else if (x>3156 && x<=6312)
+            {       
+                output = "lower middle income";
+            }
+            else if (x>6312 && x<=15780)
+            {       
+                output = "middle class";
+            }
+            else if (x>15780 && x<=23670)
+            {       
+                output = "upper middle income";
+            }
+            else if (x>23670 && x<=31560)
+            {       
+                output = "upper income";
+            }
+            else 
+            {       
+                output = "rich";
+            }
+            
+            
+            return output;
+        }
+    
+    var value = 1;
+	emit(        
+        
+        { class:  socialclass(parseFloat(this["Total Household Income"]),parseFloat(this["Total Number of Family members"] ) )}, value );
+}
+
+reduce = function(key, values) { 
+	var total = 0;
+    
+    
+	for( var i = 0; i < values.length; i++ ) {
+        total += values[i];
+      
+    
+        
+		
+	}
+  
+        
+        
+	return total;
+}
+
+
+
+db.phincomeexpenditure.mapReduce( map,
+                     reduce,
+                     {
+                       out: 'phincomeexpenditure.classes'
+                       
+                       
+                     }
+                   )
+
+db.phincomeexpenditure.classes.find().pretty()
+
+// find average food expenditure per socioeconomic class
+
+map = function() {
+   function socialclass (x, y)
+        {
+             var output ="";
+            x = x/y; 
+           if (x<=1578)
+            {
+                output = "poor";
+            }
+            else if (x>1578 && x<=3156)
+            {       
+                output = "low income";
+            }
+            else if (x>3156 && x<=6312)
+            {       
+                output = "lower middle income";
+            }
+            else if (x>6312 && x<=15780)
+            {       
+                output = "middle class";
+            }
+            else if (x>15780 && x<=23670)
+            {       
+                output = "upper middle income";
+            }
+            else if (x>23670 && x<=31560)
+            {       
+                output = "upper income";
+            }
+            else 
+            {       
+                output = "rich";
+            }
+            
+            
+            return output;
+        }
+    
+    
+	emit(        
+        
+        { class:  socialclass(parseFloat(this["Total Household Income"]),parseFloat(this["Total Number of Family members"] ) )}, { income:parseFloat(this["Total Household Income"]), bread:parseFloat(this["Bread and Cereals Expenditure"]), rice:parseFloat(this["Total Rice Expenditure"])/parseFloat(this["Total Number of Family members"] ), meat:parseFloat(this["Meat Expenditure"]), fish:parseFloat(this["Total Fish and  marine products Expenditure"]), fruit:parseFloat(this["Fruit Expenditure"]), veggie:parseFloat(this["Vegetables Expenditure"]),hre:parseFloat(this["Restaurant and hotels Expenditure"]),totalfood:parseFloat(this["Total Food Expenditure"]), familysize:parseFloat(this["Total Number of Family members"] ),    numberoffam:1.0 } );
+}
+
+reduce = function(key, values) { 
+	var total = {income:0.0,bread:0.0, rice:0.0, meat:0.0, fish:0.0, fruit:0.0, veggie:0.0, hre:0.0, totalfood:0.0, familysize:0.0, numberoffam:0.0};
+    
+    
+	for( var i = 0; i < values.length; i++ ) {
+        total.income += values[i].income;
+            total.bread += values[i].bread; 
+       
+        total.rice += values[i].rice;
+        
+        total.meat += values[i].meat;
+        total.fruit += values[i].fruit;
+        total.fish += values[i].fish;
+        total.veggie += values[i].veggie;
+        total.hre += values[i].hre;
+        total.totalfood += values[i].totalfood;
+        total.familysize += values[i].familysize;
+        total.numberoffam += values[i].numberoffam;
+      
+    
+        
+		
+	}
+    //total.rice = total.rice/2;   
+        
+        
+	return total;
+}
+
+finalizeFunction2 = function(key, reducedVal){
+    reducedVal.income = reducedVal.income/reducedVal.numberoffam;
+    reducedVal.bread = reducedVal.bread/reducedVal.numberoffam;
+    reducedVal.rice = reducedVal.rice/reducedVal.numberoffam;
+    reducedVal.meat = reducedVal.meat/reducedVal.numberoffam;
+    reducedVal.fruit = reducedVal.fruit/reducedVal.numberoffam;
+    reducedVal.fish = reducedVal.fish/reducedVal.numberoffam;
+    reducedVal.veggie = reducedVal.veggie/reducedVal.numberoffam;
+    reducedVal.hre = reducedVal.hre/reducedVal.numberoffam;
+    reducedVal.familysize = reducedVal.familysize/reducedVal.numberoffam;
+    reducedVal.totalfood = reducedVal.totalfood/reducedVal.numberoffam;
+    
+
+                       return reducedVal;
+}
+
+db.phincomeexpenditure.mapReduce( map,
+                     reduce,
+                     {
+                       out: 'phincomeexpenditure.avgfoodall',
+                       
+                       finalize: finalizeFunction2
+                     }
+                   )
+
+db.phincomeexpenditure.avgfoodall.find().pretty()
+
+// average meal cost per socio economic class
+
+map = function() {
+
+    
+    
+	emit(        
+        
+        { class: this._id.class }, {total: (this.value.bread + this.value.rice + this.value.meat + this.value.fish+this.value.fruit+this.value.veggie)/this.value.familysize/30/3  } );
+}
+
+reduce = function(key, values) { 
+	var total = {total:0};
+    
+    
+	for( var i = 0; i < values.length; i++ ) {
+        
+      total.total += values[i].total;
+    
+        
+		
+	}
+    
+        
+	return total.total/values.length;
+}
+res = db.phincomeexpenditure.avgfoodall.mapReduce(map, reduce, {out: 'phincomeexpenditure.avgmeal'})
+
+db.phincomeexpenditure.avgmeal.find().pretty()
+
+
+
+// average of overall things
+map = function() {
+   function socialclass (x, y)
+        {
+             var output ="";
+            x = x/y; 
+           if (x<=1578)
+            {
+                output = "poor";
+            }
+            else if (x>1578 && x<=3156)
+            {       
+                output = "low income";
+            }
+            else if (x>3156 && x<=6312)
+            {       
+                output = "lower middle income";
+            }
+            else if (x>6312 && x<=15780)
+            {       
+                output = "middle class";
+            }
+            else if (x>15780 && x<=23670)
+            {       
+                output = "upper middle income";
+            }
+            else if (x>23670 && x<=31560)
+            {       
+                output = "upper income";
+            }
+            else 
+            {       
+                output = "rich";
+            }
+            
+            
+            return output;
+        }
+    
+    var value = { income:parseFloat(this["Total Household Income"]), totalfood:parseFloat(this["Total Food Expenditure"]), alcohol: parseInt(this["Alcoholic Beverages Expenditure"]), tobacco:parseInt(this["Tobacco Expenditure"]), clothing: parseInt(this["Clothing, Footwear and Other Wear Expenditure"]), medical: parseInt(this["Medical Care Expenditure"]), education: parseInt(this["Education Expenditure"]), housing: parseInt(this["Housing and water Expenditure"]),  transpo: parseInt(this["Transportation Expenditure"] ) ,    numberoffam:1.0 } ;
+	emit(        
+        
+        { class:  socialclass(parseFloat(this["Total Household Income"]),parseFloat(this["Total Number of Family members"] ) )}, value );
+}
+
+reduce = function(key, values) { 
+	var total = {income:0.0,totalfood:0.0, alcohol:0.0, tobacco:0.0, clothing:0.0, medical:0.0, education:0.0, housing:0.0, transpo:0.0, numberoffam:0.0};
+    
+    
+	for( var i = 0; i < values.length; i++ ) {
+        total.income += values[i].income;
+            total.totalfood += values[i].totalfood; 
+       
+        total.alcohol += values[i].alcohol;
+        
+        total.tobacco += values[i].tobacco;
+        total.clothing += values[i].clothing;
+        total.medical += values[i].medical;
+        total.education += values[i].education;
+        total.housing += values[i].housing;
+        total.transpo += values[i].transpo;
+
+        total.numberoffam += values[i].numberoffam;
+      
+    
+        
+		
+	}
+    //total.rice = total.rice/2;   
+        
+        
+	return total;
+}
+
+finalizeFunction2 = function(key, reducedVal){
+    reducedVal.income = reducedVal.income/reducedVal.numberoffam;
+    reducedVal.alcohol = reducedVal.alcohol/reducedVal.numberoffam;
+    reducedVal.tobacco = reducedVal.tobacco/reducedVal.numberoffam;
+    reducedVal.clothing = reducedVal.clothing/reducedVal.numberoffam;
+    reducedVal.medical = reducedVal.medical/reducedVal.numberoffam;
+    reducedVal.education = reducedVal.education/reducedVal.numberoffam;
+    reducedVal.housing = reducedVal.housing/reducedVal.numberoffam;
+    reducedVal.transpo = reducedVal.transpo/reducedVal.numberoffam;
+    reducedVal.totalfood = reducedVal.totalfood/reducedVal.numberoffam;
+    
+
+                       return reducedVal;
+}
+
+db.phincomeexpenditure.mapReduce( map,
+                     reduce,
+                     {
+                       out: 'phincomeexpenditure.avgotherall',
+                       
+                       finalize: finalizeFunction2
+                     }
+                   )
+
+db.phincomeexpenditure.avgotherall.find().pretty()
+
+
+
+
+// foodtypes vs medical expenses
+
+map = function() {
+   function socialclass (x, y)
+        {
+             var output ="";
+            x = x/y; 
+           if (x<=1578)
+            {
+                output = "poor";
+            }
+            else if (x>1578 && x<=3156)
+            {       
+                output = "low income";
+            }
+            else if (x>3156 && x<=6312)
+            {       
+                output = "lower middle income";
+            }
+            else if (x>6312 && x<=15780)
+            {       
+                output = "middle class";
+            }
+            else if (x>15780 && x<=23670)
+            {       
+                output = "upper middle income";
+            }
+            else if (x>23670 && x<=31560)
+            {       
+                output = "upper income";
+            }
+            else 
+            {       
+                output = "rich";
+            }
+            
+            
+            return output;
+        }
+    
+    
+	emit(        
+        
+        { class:  socialclass(parseInt(this["Total Household Income"]),parseInt(this["Total Number of Family members"] ) ) }, { bread: [parseInt(this["Bread and Cereals Expenditure"])], rice: [parseInt(this["Total Rice Expenditure"])], meat: [parseInt(this["Meat Expenditure"])], fish: [parseInt(this["Total Fish and  marine products Expenditure"])], fruit: [parseInt(this["Fruit Expenditure"])], veggie: [parseInt(this["Vegetables Expenditure"])], medical: [parseInt(this["Medical Care Expenditure"])], familynum: 1 } );
+}
+
+
+
+reduce = function(key, values) { 
+	
+    
+    var total2 = {bread:[], rice:[], meat: [], fish: [], fruit :[], veggie:[], medical:[],familynum:0};
+    
+    
+	for( var i = 0; i < values.length; i++ ) {
+        
+        
+        if(i==0)
+        {
+            total2 = values[i]; //since reduce can be invoked multiple times and gets the previous reduce's return as the next value in the keyvaluepair.        
+        }
+        else
+        {
+            
+            total2.bread.push(values[i].bread[0]); 
+            total2.rice.push(values[i].rice[0]);
+            total2.meat.push( values[i].meat[0]);
+            total2.fruit.push(values[i].fruit[0]);
+            total2.fish.push(values[i].fish[0]);
+            total2.veggie.push(values[i].veggie[0]);
+            total2.medical.push(values[i].medical[0]);
+            total2.familynum += values[i].familynum;
+        }
+        
+        
+        
+       
+      
+    
+        
+		
+	}
+        //total.income = total.income/values.length;
+        
+        //total.familysize = total.familysize/values.length;
+        
+	return total2;
+}
+
+
+
+finalizeFunction2 = function(key, total2){
+     function getPearsonCorrelation(x, y)
+    {
+    var shortestArrayLength = 0;
+     
+    if(x.length == y.length) {
+        shortestArrayLength = x.length;
+    } else if(x.length > y.length) {
+        shortestArrayLength = y.length;
+        
+    } else {
+        shortestArrayLength = x.length;
+       
+    }
+  
+    var xy = [];
+    var x2 = [];
+    var y2 = [];
+  
+    for(var i=0; i<shortestArrayLength; i++) {
+        xy.push(x[i] * y[i]);
+        x2.push(x[i] * x[i]);
+        y2.push(y[i] * y[i]);
+    }
+  
+    var sum_x = 0;
+    var sum_y = 0;
+    var sum_xy = 0;
+    var sum_x2 = 0;
+    var sum_y2 = 0;
+  
+    for(var i=0; i< shortestArrayLength; i++) {
+        sum_x += x[i];
+        sum_y += y[i];
+        sum_xy += xy[i];
+        sum_x2 += x2[i];
+        sum_y2 += y2[i];
+    }
+  
+    var step1 = (shortestArrayLength * sum_xy) - (sum_x * sum_y);
+    var step2 = (shortestArrayLength * sum_x2) - (sum_x * sum_x);
+    var step3 = (shortestArrayLength * sum_y2) - (sum_y * sum_y);
+    var step4 = Math.sqrt(step2 * step3);
+    var answer = step1 / step4;
+  
+    return answer;
+}
+    var total = {bread:[], rice:[], meat: [], fish: [], fruit :[], veggie:[], medical:[],familynum:0};
+    
+    function getSum(total, num) {
+    return total + num;
+}
+    total.medical[0] = total2.medical.reduce(getSum);
+    total.familynum = total2.familynum;
+    total.bread[0] =  getPearsonCorrelation(total2.bread, total2.medical); 
+        total.rice[0] = getPearsonCorrelation(total2.rice, total2.medical);
+        total.meat[0] = getPearsonCorrelation(total2.meat, total2.medical);
+        total.fish[0] = getPearsonCorrelation(total2.fish, total2.medical);
+        total.fruit[0] = getPearsonCorrelation(total2.fruit, total2.medical);
+        total.veggie[0] = getPearsonCorrelation(total2.veggie, total2.medical);
+        //total.medical[0] = getPearsonCorrelation(total2.hre, total2.income);
+                       return total;
+}
+
+db.phincomeexpenditure.mapReduce( map,
+                     reduce,
+                     {
+                       out: 'phincomeexpenditure.foodtypevsmedical',
+                       
+                       finalize: finalizeFunction2
+                     }
+                   )
+
+db.phincomeexpenditure.foodtypevsmedical.find().pretty()
+
+
+// income vs vices and needs
+map = function() {
+   function socialclass (x, y)
+        {
+             var output ="";
+            x = x/y; 
+           if (x<=1578)
+            {
+                output = "poor";
+            }
+            else if (x>1578 && x<=3156)
+            {       
+                output = "low income";
+            }
+            else if (x>3156 && x<=6312)
+            {       
+                output = "lower middle income";
+            }
+            else if (x>6312 && x<=15780)
+            {       
+                output = "middle class";
+            }
+            else if (x>15780 && x<=23670)
+            {       
+                output = "upper middle income";
+            }
+            else if (x>23670 && x<=31560)
+            {       
+                output = "upper income";
+            }
+            else 
+            {       
+                output = "rich";
+            }
+            
+            
+            return output;
+        }
+    
+    
+	emit(        
+        
+        { class:  socialclass(parseInt(this["Total Household Income"]),parseInt(this["Total Number of Family members"] ) )}, { income: [parseInt(this["Total Household Income"])], alcohol: [parseInt(this["Alcoholic Beverages Expenditure"])], tobacco: [parseInt(this["Tobacco Expenditure"])], clothing: [parseInt(this["Clothing, Footwear and Other Wear Expenditure"])], medical: [parseInt(this["Medical Care Expenditure"])], education: [parseInt(this["Education Expenditure"])], housing: [parseInt(this["Housing and water Expenditure"])], food: [parseInt(this["Total Food Expenditure"])], transpo: [parseInt(this["Transportation Expenditure"] )] } );
+}
+
+
+
+reduce = function(key, values) { 
+	
+    
+    var total2 = {income:[],alcohol:[], tobacco:[], clothing: [], medical: [], education :[], housing:[], food:[],transpo:[]};
+    
+    
+	for( var i = 0; i < values.length; i++ ) {
+        
+        
+        if(i==0)
+        {
+            total2 = values[i]; //since reduce can be invoked multiple times and gets the previous reduce's return as the next value in the keyvaluepair.        
+        }
+        else
+        {
+            total2.income.push(values[i].income[0]);
+            total2.alcohol.push(values[i].alcohol[0]); 
+            total2.tobacco.push(values[i].tobacco[0]);
+            total2.clothing.push( values[i].clothing[0]);
+            total2.medical.push(values[i].medical[0]);
+            total2.education.push(values[i].education[0]);
+            total2.housing.push(values[i].housing[0]);
+            total2.food.push(values[i].food[0]);
+            total2.transpo.push(values[i].transpo[0]);
+        }
+        
+        
+       
+       
+      
+    
+        
+		
+	}
+        //total.income = total.income/values.length;
+        
+        //total.familysize = total.familysize/values.length;
+        
+	return total2;
+}
+
+
+
+finalizeFunction2 = function(key, total2){
+    
+     function getPearsonCorrelation(x, y)
+    {
+    var shortestArrayLength = 0;
+     
+    if(x.length == y.length) {
+        shortestArrayLength = x.length;
+    } else if(x.length > y.length) {
+        shortestArrayLength = y.length;
+        console.error('x has more items in it, the last ' + (x.length - shortestArrayLength) + ' item(s) will be ignored');
+    } else {
+        shortestArrayLength = x.length;
+        console.error('y has more items in it, the last ' + (y.length - shortestArrayLength) + ' item(s) will be ignored');
+    }
+  
+    var xy = [];
+    var x2 = [];
+    var y2 = [];
+  
+    for(var i=0; i<shortestArrayLength; i++) {
+        xy.push(x[i] * y[i]);
+        x2.push(x[i] * x[i]);
+        y2.push(y[i] * y[i]);
+    }
+  
+    var sum_x = 0;
+    var sum_y = 0;
+    var sum_xy = 0;
+    var sum_x2 = 0;
+    var sum_y2 = 0;
+  
+    for(var i=0; i< shortestArrayLength; i++) {
+        sum_x += x[i];
+        sum_y += y[i];
+        sum_xy += xy[i];
+        sum_x2 += x2[i];
+        sum_y2 += y2[i];
+    }
+  
+    var step1 = (shortestArrayLength * sum_xy) - (sum_x * sum_y);
+    var step2 = (shortestArrayLength * sum_x2) - (sum_x * sum_x);
+    var step3 = (shortestArrayLength * sum_y2) - (sum_y * sum_y);
+    var step4 = Math.sqrt(step2 * step3);
+    var answer = step1 / step4;
+  
+    return answer;
+}
+ 
+ var total = {income:[],alcohol:[], tobacco:[], clothing: [], medical: [], education :[], housing:[], food:[],transpo:[]};
+    
+    function getSum(total, num) {
+    return total + num;
+}
+    
+    total.income[0] = total2.income.reduce(getSum);
+    
+    total.alcohol[0] =  getPearsonCorrelation(total2.alcohol, total2.income); 
+        total.tobacco[0] = getPearsonCorrelation(total2.tobacco, total2.income);
+        total.clothing[0] = getPearsonCorrelation(total2.clothing, total2.income);
+        total.medical[0] = getPearsonCorrelation(total2.medical, total2.income);
+        total.education[0] = getPearsonCorrelation(total2.education, total2.income);
+        total.housing[0] = getPearsonCorrelation(total2.housing, total2.income);
+        total.food[0] = getPearsonCorrelation(total2.food, total2.income);
+        total.transpo[0] = getPearsonCorrelation(total2.transpo, total2.income);
+                       return total;
+}
+
+db.phincomeexpenditure.mapReduce( map,
+                     reduce,
+                     {
+                       out: 'phincomeexpenditure.incomevsvices',
+                       
+                       finalize: finalizeFunction2
+                     }
+                   )
+
+db.phincomeexpenditure.incomevsvices.find().pretty()
+
+
+// total excess/deficit per socio economic class
+
+
+map = function() {
+
+    
+    
+	function socialclass (x, y)
+        {
+             var output ="";
+            x = x/y; 
+           if (x<=1578)
+            {
+                output = "poor";
+            }
+            else if (x>1578 && x<=3156)
+            {       
+                output = "low income";
+            }
+            else if (x>3156 && x<=6312)
+            {       
+                output = "lower middle income";
+            }
+            else if (x>6312 && x<=15780)
+            {       
+                output = "middle class";
+            }
+            else if (x>15780 && x<=23670)
+            {       
+                output = "upper middle income";
+            }
+            else if (x>23670 && x<=31560)
+            {       
+                output = "upper income";
+            }
+            else 
+            {       
+                output = "rich";
+            }
+            
+            
+            return output;
+        }
+    
+    var value = { income:parseFloat(this["Total Household Income"]), totalfood:parseFloat(this["Total Food Expenditure"]), alcohol: parseInt(this["Alcoholic Beverages Expenditure"]), tobacco:parseInt(this["Tobacco Expenditure"]), clothing: parseInt(this["Clothing, Footwear and Other Wear Expenditure"]), medical: parseInt(this["Medical Care Expenditure"]), education: parseInt(this["Education Expenditure"]), housing: parseInt(this["Housing and water Expenditure"]),  transpo: parseInt(this["Transportation Expenditure"] ) ,    numberoffam:1.0 } ;
+	emit(        
+        
+        { class:  socialclass(parseFloat(this["Total Household Income"]),parseFloat(this["Total Number of Family members"] ) )}, value );
+}
+
+reduce = function(key, values) { 
+	var total = {income:0.0,totalfood:0.0, alcohol:0.0, tobacco:0.0, clothing:0.0, medical:0.0, education:0.0, housing:0.0, transpo:0.0, numberoffam:0.0};
+    
+    
+	for( var i = 0; i < values.length; i++ ) {
+        total.income += values[i].income;
+            total.totalfood += values[i].totalfood; 
+       
+        total.alcohol += values[i].alcohol;
+        
+        total.tobacco += values[i].tobacco;
+        total.clothing += values[i].clothing;
+        total.medical += values[i].medical;
+        total.education += values[i].education;
+        total.housing += values[i].housing;
+        total.transpo += values[i].transpo;
+
+        total.numberoffam += values[i].numberoffam; 
+		
+	}
+    
+        
+	return total;
+}
+finalizeFunction2 = function(key, reducedVal){
+    reducedVal.income = (reducedVal.income - reducedVal.totalfood - reducedVal.alcohol -reducedVal.tobacco-reducedVal.clothing-reducedVal.medical -reducedVal.education - reducedVal.housing - reducedVal.transpo)/reducedVal.numberoffam;
+    
+
+                       return reducedVal;
+}
+
+db.phincomeexpenditure.mapReduce( map,
+                     reduce,
+                     {
+                       out: 'phincomeexpenditure.netincome',
+                       
+                       finalize: finalizeFunction2
+                     }
+                   )
+
+db.phincomeexpenditure.netincome.find().pretty()
+
+map = function() {
+   function socialclass (x, y)
+        {
+             var output ="";
+            x = x/y; 
+           if (x<=1578)
+            {
+                output = "poor";
+            }
+            else if (x>1578 && x<=3156)
+            {       
+                output = "low income";
+            }
+            else if (x>3156 && x<=6312)
+            {       
+                output = "lower middle income";
+            }
+            else if (x>6312 && x<=15780)
+            {       
+                output = "middle class";
+            }
+            else if (x>15780 && x<=23670)
+            {       
+                output = "upper middle income";
+            }
+            else if (x>23670 && x<=31560)
+            {       
+                output = "upper income";
+            }
+            else 
+            {       
+                output = "rich";
+            }
+            
+            
+            return output;
+        } 
+    
+    
+	emit(        
+        
+        { class:  socialclass(parseInt(this["Total Household Income"]),parseInt(this["Total Number of Family members"] ) )}, { income: [parseInt(this["Total Household Income"])], bread: [parseInt(this["Bread and Cereals Expenditure"])], rice: [parseInt(this["Total Rice Expenditure"])], meat: [parseInt(this["Meat Expenditure"])], fish: [parseInt(this["Total Fish and  marine products Expenditure"])], fruit: [parseInt(this["Fruit Expenditure"])], veggie: [parseInt(this["Vegetables Expenditure"])], hre: [parseInt(this["Restaurant and hotels Expenditure"])], familysize: parseInt(this["Total Number of Family members"] ) } );
+}
+
+
+
+reduce = function(key, values) { 
+	
+    
+    var total2 = {income:[],bread:[], rice:[], meat: [], fish: [], fruit :[], veggie:[], hre:[],familysize:0};
+    
+    
+	for( var i = 0; i < values.length; i++ ) {
+        
+        
+        if(i==0)
+        {
+            total2 = values[i]; //since reduce can be invoked multiple times and gets the previous reduce's return as the next value in the keyvaluepair.        
+        }
+        else
+        {
+            total2.income.push(values[i].income[0]);
+            total2.bread.push(values[i].bread[0]); 
+            total2.rice.push(values[i].rice[0]);
+            total2.meat.push( values[i].meat[0]);
+            total2.fruit.push(values[i].fruit[0]);
+            total2.fish.push(values[i].fish[0]);
+            total2.veggie.push(values[i].veggie[0]);
+            total2.hre.push(values[i].hre[0]);
+        }
+        
+        
+        total2.familysize += values[i].familysize;
+       
+      
+    
+        
+		
+	}
+       
+        
+	return total2;
+}
+
+
+
+finalizeFunction2 = function(key, total2){
+     function getPearsonCorrelation(x, y)
+    {
+    var shortestArrayLength = 0;
+     
+    if(x.length == y.length) {
+        shortestArrayLength = x.length;
+    } else if(x.length > y.length) {
+        shortestArrayLength = y.length;
+        console.error('x has more items in it, the last ' + (x.length - shortestArrayLength) + ' item(s) will be ignored');
+    } else {
+        shortestArrayLength = x.length;
+        console.error('y has more items in it, the last ' + (y.length - shortestArrayLength) + ' item(s) will be ignored');
+    }
+  
+    var xy = [];
+    var x2 = [];
+    var y2 = [];
+  
+    for(var i=0; i<shortestArrayLength; i++) {
+        xy.push(x[i] * y[i]);
+        x2.push(x[i] * x[i]);
+        y2.push(y[i] * y[i]);
+    }
+  
+    var sum_x = 0;
+    var sum_y = 0;
+    var sum_xy = 0;
+    var sum_x2 = 0;
+    var sum_y2 = 0;
+  
+    for(var i=0; i< shortestArrayLength; i++) {
+        sum_x += x[i];
+        sum_y += y[i];
+        sum_xy += xy[i];
+        sum_x2 += x2[i];
+        sum_y2 += y2[i];
+    }
+  
+    var step1 = (shortestArrayLength * sum_xy) - (sum_x * sum_y);
+    var step2 = (shortestArrayLength * sum_x2) - (sum_x * sum_x);
+    var step3 = (shortestArrayLength * sum_y2) - (sum_y * sum_y);
+    var step4 = Math.sqrt(step2 * step3);
+    var answer = step1 / step4;
+  
+    return answer;
+}
+    var total = {income:[],bread:[], rice:[], meat: [], fish: [], fruit :[], veggie:[], hre:[],familysize:0};
+    
+    function getSum(total, num) {
+    return total + num;
+}
+    total.income[0] = total2.income.reduce(getSum);
+    total.familysize = total2.familysize;
+    total.bread[0] =  getPearsonCorrelation(total2.bread, total2.income); 
+        total.rice[0] = getPearsonCorrelation(total2.rice, total2.income);
+        total.meat[0] = getPearsonCorrelation(total2.meat, total2.income);
+        total.fish[0] = getPearsonCorrelation(total2.fish, total2.income);
+        total.fruit[0] = getPearsonCorrelation(total2.fruit, total2.income);
+        total.veggie[0] = getPearsonCorrelation(total2.veggie, total2.income);
+        total.hre[0] = getPearsonCorrelation(total2.hre, total2.income);
+                       return total;
+}
+
+db.phincomeexpenditure.mapReduce( map,
+                     reduce,
+                     {
+                       out: 'phincomeexpenditure.incomevsexp',
+                       
+                       finalize: finalizeFunction2
+                     }
+                   )
+
+db.phincomeexpenditure.incomevsexp.find().pretty()
